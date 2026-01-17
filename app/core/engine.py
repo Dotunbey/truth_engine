@@ -30,7 +30,7 @@ class TruthEngine:
             if passed:
                 earned_points += rule.weight
             else:
-                compulsory_failed = True # FLAG THE FAILURE
+                compulsory_failed = True # Flag logic failure
             
             explanations.append(explain(rule.rule_id, passed, False, rule.weight))
 
@@ -50,21 +50,21 @@ class TruthEngine:
         else:
             raw_score = (earned_points / total_possible_points) * 100
 
-        # --- THE FIX: INTEGRITY PENALTY ---
+        # --- THE FIX: SCALING FACTOR (0.75) ---
         final_score = raw_score
         
         if compulsory_failed:
-            # DEDUCT 25% from the score directly.
-            # 90% becomes 65%. 60% becomes 35%.
-            final_score = max(0.0, raw_score - 25.0)
+            # Your Formula: (Raw / 100) * 75
+            # Effectively multiplying by 0.75
+            final_score = raw_score * 0.75
             
-            # Add a note to explanations so the user knows why score dropped
+            # Add a clear explanation for the drop
             explanations.append(RuleResult(
-                rule_id="INTEGRITY_PENALTY",
+                rule_id="SCALING_PENALTY",
                 passed=False,
-                critical=True,
-                weight=-25,
-                reason="PENALTY: Compulsory Rule Violated (-25%)"
+                critical=False,
+                weight=0,
+                reason=f"Compulsory Failure: Score capped to 75% of max (Raw: {round(raw_score, 1)}%)"
             ))
 
         # 5. DETERMINE VERDICT
@@ -72,13 +72,14 @@ class TruthEngine:
 
         if critical_danger:
             verdict = "CRITICAL_WARNING"
-        elif final_score >= 75.0:
+        elif final_score > 75.0: # changed to strictly > to ensure 75.0 (the cap) is barely safe or just below "True" High Conviction
             verdict = "HIGH_CONVICTION"
         elif final_score >= 40.0:
             verdict = "WEAK_ALIGNMENT"
         else:
             verdict = "LOW_PROBABILITY"
 
+        # Explicitly return with keyword arguments
         return EvaluationResult(
             verdict=verdict,
             alignment_score=final_score,
